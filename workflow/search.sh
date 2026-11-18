@@ -10,6 +10,7 @@
 
 source "${0:A:h}/lib/common.zsh"
 source $GJ_WF_DIR/lib/gh.zsh
+source $GJ_WF_DIR/lib/files.zsh
 typeset -i HAS_UPDATER=0
 [[ -r $GJ_WF_DIR/lib/update.zsh ]] && source $GJ_WF_DIR/lib/update.zsh && HAS_UPDATER=1
 
@@ -81,7 +82,7 @@ if [[ $Q == (#s)'>'[[:space:]]#(refresh|r)[[:space:]]#(#e) || $Q == (#s)'>'[[:sp
   emit; exit 0
 fi
 
-if [[ $Q == (#b)([^[:space:]]##)[[:space:]]##/(*) ]] && (( $+functions[files_mode] )); then
+if [[ $Q == (#b)([^[:space:]]##)[[:space:]]##/(*) ]]; then
   files_mode "$match[1]" "$match[2]"
   emit; exit 0
 fi

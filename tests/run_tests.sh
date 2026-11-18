@@ -158,5 +158,44 @@ check "open.sh refuses non-github / malformed URLs" eval '[[ ! -e $MOCK_DIR/open
 reset_all; fixtures
 check "open.sh refresh rebuilds and reports" eval '[[ $(act refresh) == "Repo list refreshed: 4 repos" && -s $R ]]'
 
+# --- file mode -----------------------------------------------------------------
+seed
+CL=$code_dir/canon
+mkdir -p $CL/prod/app $CL/docs
+git -C $CL init -q && git -C $CL remote add origin git@github.com:TailorBrands/canon.git
+touch $CL/prod/app/values.yaml $CL/docs/'my file#1.md' $CL/README.md
+git -C $CL add -A && git -C $CL -c user.email=t@t -c user.name=t commit -q -m init
+print -r -- $'TailorBrands/canon\t'$CL > $alfred_workflow_cache/clones.tsv
+rm -f $MOCK_DIR/gh.log
+out=$(search 'TailorBrands/canon /values')
+check "file mode emits valid JSON" eval 'print -r -- $out | jq -e . >/dev/null'
+check "local clone file found, blob URL on default branch" \
+  eval '[[ $(print -r -- $out | jq -r ".items[0] | [.title,.arg] | @tsv") == "prod/app/values.yaml	https://github.com/TailorBrands/canon/blob/master/prod/app/values.yaml" ]]'
+check "local clone needs no gh call" eval '[[ -z $(ghlog) ]]'
+check "file item ⌃ copies the URL" eval '[[ $(print -r -- $out | jq -r ".items[0].mods.ctrl.arg") == "https://github.com/TailorBrands/canon/blob/master/prod/app/values.yaml" ]]'
+check "path with space and # is URL-encoded" \
+  eval '[[ $(search "TailorBrands/canon /my file" | jq -r ".items[0].arg") == "https://github.com/TailorBrands/canon/blob/master/docs/my%20file%231.md" ]]'
+check "file mode is case-insensitive" eval '[[ $(search "TailorBrands/canon /READ" | jq -r ".items[0].title") == README.md ]]'
+
+# uncloned repo → GitHub tree (cached)
+print -l src/main.go src/values.go > $MOCK_DIR/tree_TailorBrands__papel
+out=$(search 'TailorBrands/papel /values')
+check "uncloned repo uses the tree API" eval '[[ $(print -r -- $out | jq -r ".items[0].arg") == "https://github.com/TailorBrands/papel/blob/master/src/values.go" ]]'
+search 'TailorBrands/papel /main' >/dev/null
+check "tree is cached (one API call for two queries)" eval '[[ $(grep -c "git/trees" $MOCK_DIR/gh.log) == 1 ]]'
+check "tree cache file is mode 600" eval '[[ $(stat -f %Lp $alfred_workflow_cache/trees/TailorBrands__papel.txt 2>/dev/null || stat -c %a $alfred_workflow_cache/trees/TailorBrands__papel.txt) == 600 ]]'
+touch $MOCK_DIR/tree_TailorBrands__papel.truncated; rm -rf $alfred_workflow_cache/trees
+check "truncated tree adds an info item" eval '[[ $(stitles "TailorBrands/papel /") == *"Tree truncated by GitHub: clone it under "* ]]'
+
+# repo not in the cache → default branch looked up
+print -l lib/x.rb > $MOCK_DIR/tree_other__thing; print develop > $MOCK_DIR/branch_other__thing
+check "unknown repo: default branch looked up via gh" \
+  eval '[[ $(search "other/thing /x" | jq -r ".items[0].arg") == "https://github.com/other/thing/blob/develop/lib/x.rb" ]]'
+check "unreachable repo → warning" eval '[[ $(stitles "nope/nope /x") == "Couldn’t read nope/nope"* ]]'
+rm -f $MOCK_DIR/gh.log
+check "invalid slug in file mode → no gh call" \
+  eval '[[ $(stitles "a/../b /x") == "Not a valid owner/repo: a/../b" && -z $(ghlog) ]]'
+check "no matching file → info item" eval '[[ $(stitles "TailorBrands/canon /zzzz") == "No file matches “zzzz”"* ]]'
+
 print "\n$pass passed, $fail failed"
 (( fail == 0 ))
