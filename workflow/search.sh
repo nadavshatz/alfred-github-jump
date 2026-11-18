@@ -42,7 +42,7 @@ score() {
   elif [[ $s == *${q}* ]];       then REPLY=4
   else
     # subsequence: every query character appears in order
-    local pat=${(j:*:)${(s::)q}}
+    local pat=${(j:*:)${(@b)${(s::)q}}}
     [[ $s == *${~pat}* ]] || return 1
     REPLY=5
   fi
@@ -50,14 +50,14 @@ score() {
 
 search_repos() {
   local q=${(L)${Q//[[:space:]]/}}
-  # Glob-quote the query so characters like * [ ( are matched literally.
-  local qq=${(b)q}
   local -a ranked=()
-  local line slug branch desc
+  local slug branch desc
+  integer known=0
   while IFS=$'\t' read -r slug branch desc; do
     valid_slug "$slug" || continue
+    [[ ${(L)slug} == ${(L)Q} ]] && known=1
     if [[ -z $q ]]; then ranked+=("9"$'\t'"$slug"$'\t'"$desc"); continue; fi
-    score "$slug" "$qq" || continue
+    score "$slug" "$q" || continue
     ranked+=("$REPLY"$'\t'"$(( 1000 + ${#slug} ))"$'\t'"$slug"$'\t'"$desc")
   done < $REPOS_FILE
   ranked=(${(o)ranked})
@@ -68,13 +68,21 @@ search_repos() {
     else repo_item "$f[3]" "${f[4]:-}"; fi
   done
   # A full owner/repo that isn't in the cache can still be opened by URL.
-  if [[ -n $Q && $Q != *[[:space:]]* ]] && valid_slug "$Q" && ! (( ${ranked[(I)*$'\t'$Q$'\t'*]} )); then
+  if [[ -n $Q && $Q != *[[:space:]]* ]] && valid_slug "$Q" && (( ! known )); then
     local -a before=("${(@)ITEMS}")
     ITEMS=()
     repo_item "$Q" "Not in your cached list"
     ITEMS+=("${(@)before}")
   fi
   (( $#ITEMS )) || item "No repo matches “$Q”" "Type owner/repo to open any repo · “> refresh” to rebuild the list" "" false info
+}
+
+error_items() {
+  [[ -s $ERRORS_FILE ]] || return 0
+  local o
+  for o in ${(f)"$(<$ERRORS_FILE)"}; do
+    item "Couldn’t list $o (SSO not authorised for gh?)" "Run: gh auth refresh, or authorise the token for $o on github.com" "" false warning
+  done
 }
 
 if [[ $Q == (#s)'>'[[:space:]]#(refresh|r)[[:space:]]#(#e) || $Q == (#s)'>'[[:space:]]#(#e) ]]; then
@@ -88,6 +96,12 @@ if [[ $Q == (#b)([^[:space:]]##)[[:space:]]##/(*) ]]; then
 fi
 
 if [[ ! -s $REPOS_FILE ]]; then
+  # The last refresh finished (no mark) but listed nothing: show why, don't spin.
+  if [[ -s $ERRORS_FILE && ! -e $REFRESH_MARK ]]; then
+    error_items
+    item "Retry: > refresh" "Rebuild the repo list now" refresh true refresh
+    emit; exit 0
+  fi
   if ! gh_ok; then
     item "GitHub CLI not ready: run gh auth login" "Needs gh at ${GH_BIN} and a login (gh auth login in a terminal)" "" false warning
     emit; exit 0
@@ -102,11 +116,6 @@ age_of $REPOS_FILE
 
 search_repos
 
-if [[ -s $ERRORS_FILE ]]; then
-  local o
-  for o in ${(f)"$(<$ERRORS_FILE)"}; do
-    item "Couldn’t list $o (SSO not authorised for gh?)" "Run: gh auth refresh, or authorise the token for $o on github.com" "" false warning
-  done
-fi
+error_items
 [[ -z $Q ]] && (( HAS_UPDATER )) && update_notice "$GJ_WF_DIR/open.sh"
 emit

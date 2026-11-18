@@ -13,7 +13,8 @@ touch -- $REFRESH_MARK
 gh_ok || exit 1
 
 local -a owners=() failed=()
-gh_login && owners+=($REPLY)
+integer login_ok=0
+gh_login && { owners+=($REPLY); login_ok=1 }
 for o in ${(s:,:)CFG_ORGS}; do
   o=${${o##[[:space:]]#}%%[[:space:]]#}
   [[ -n $o ]] || continue
@@ -26,6 +27,20 @@ tmp=$REPOS_FILE.build.$$
 for o in $owners; do
   gh_repos $o >> $tmp 2>/dev/null || failed+=($o)
 done
+(( login_ok )) || failed+=("your account")
+# Keep the previous entries of owners that failed this time, so a transient
+# failure (network, SSO session) doesn't empty that org for a day. Owners that
+# were removed from the settings are dropped.
+if [[ -r $REPOS_FILE ]] && (( $#failed )); then
+  local -a keep=(${(L)failed}) configured=(${(L)owners})
+  local line owner
+  while IFS= read -r line; do
+    owner=${(L)line%%/*}
+    if (( ${keep[(Ie)$owner]} )) || { (( ! login_ok )) && ! (( ${configured[(Ie)$owner]} )) }; then
+      print -r -- $line >> $tmp
+    fi
+  done < $REPOS_FILE
+fi
 if [[ -s $tmp ]]; then
   sort -u -t $'\t' -k1,1 -- $tmp | atomic_write $REPOS_FILE
 fi

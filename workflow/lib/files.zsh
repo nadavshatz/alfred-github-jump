@@ -36,7 +36,7 @@ typeset -gi TRUNCATED=0
 list_files() {
   FILES=() TRUNCATED=0
   if clone_of "$1"; then
-    FILES=(${(f)"$(git -C "$REPLY" ls-files 2>/dev/null)"})
+    FILES=(${(0)"$(git -C "$REPLY" -c core.quotePath=false ls-files -z 2>/dev/null)"})
     (( $#FILES )) && return 0
   fi
   [[ -d $TREES_DIR ]] || mkdir -p -m 700 -- $TREES_DIR
@@ -53,7 +53,7 @@ list_files() {
   return 0
 }
 
-# fscore PATH QUERY(lowercase, glob-quoted) → REPLY; 1 = no match.
+# fscore PATH QUERY(lowercase, literal) → REPLY; 1 = no match.
 fscore() {
   local p=${(L)1} q=$2 b=${(L)1:t}
   if   [[ $p == $q || $b == $q ]]; then REPLY=0
@@ -61,7 +61,7 @@ fscore() {
   elif [[ $b == *${q}* ]];         then REPLY=2
   elif [[ $p == *${q}* ]];         then REPLY=3
   else
-    local pat=${(j:*:)${(s::)q}}
+    local pat=${(j:*:)${(@b)${(s::)q}}}
     [[ $p == *${~pat}* ]] || return 1
     REPLY=4
   fi
@@ -78,7 +78,7 @@ files_mode() {  # SLUG PATHQUERY
     item "Couldn’t read $slug" "Check the name, and that gh can see it (gh repo view $slug)" "" false warning
     return
   fi
-  local q=${(b)${(L)raw}} p
+  local q=${(L)raw} p
   local -a ranked=()
   for p in $FILES; do
     [[ -n $p ]] || continue

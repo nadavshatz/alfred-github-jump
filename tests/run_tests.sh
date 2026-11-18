@@ -164,7 +164,7 @@ CL=$code_dir/canon
 mkdir -p $CL/prod/app $CL/docs
 git -C $CL init -q && git -C $CL remote add origin git@github.com:TailorBrands/canon.git
 touch $CL/prod/app/values.yaml $CL/docs/'my file#1.md' $CL/README.md
-git -C $CL add -A && git -C $CL -c user.email=t@t -c user.name=t commit -q -m init
+git -C $CL add -A
 print -r -- $'TailorBrands/canon\t'$CL > $alfred_workflow_cache/clones.tsv
 rm -f $MOCK_DIR/gh.log
 out=$(search 'TailorBrands/canon /values')
@@ -218,6 +218,43 @@ print "0000000000000000000000000000000000000000000000000000000000000000  x" > $M
 rm -f $MOCK_DIR/open.log
 check "tampered update rejected" eval '[[ $(act "update_install 9.0.0") == "Update not installed: checksum mismatch" && ! -e $MOCK_DIR/open.log ]]'
 check "manual check reports newer version" eval '[[ $(act "update_check now") == "GitHub Jump 9.0.0 is available (you have 1.0.0)" ]]'
+
+# --- review fixes ----------------------------------------------------------------
+seed
+for q in 'a(b' 'x[' 'canon (' 'c|x' '^a' '~x' 'a#'; do
+  out=$(search "$q"); rc=$?
+  check "metachar query '$q' still emits JSON" eval '[[ $rc == 0 ]] && print -r -- $out | jq -e . >/dev/null'
+done
+print -r -- $'TailorBrands/xylo\tmain\t' >> $R
+check "'|' is literal, not alternation" eval '[[ $(stitles "c|x") != *xylo* ]]'
+CL=$code_dir/canon
+mkdir -p "$CL/app/[id]"; touch "$CL/app/[id]/page.tsx" "$CL/café.md"
+git -C $CL add -A
+print -r -- $'TailorBrands/canon\t'$CL > $alfred_workflow_cache/clones.tsv
+check "file query with brackets matches literally" eval '[[ $(stitles "TailorBrands/canon /[id]") == "app/[id]/page.tsx"* ]]'
+check "file query '(' does not crash" eval 'search "TailorBrands/canon /(" | jq -e . >/dev/null'
+check "non-ASCII local path shown unquoted with correct URL" \
+  eval '[[ $(search "TailorBrands/canon /caf" | jq -r ".items[0] | [.title,.arg] | @tsv") == "café.md	https://github.com/TailorBrands/canon/blob/master/caf%C3%A9.md" ]]'
+check "exact cached slug: no 'Not in your cached list' duplicate" \
+  eval '[[ $(search TailorBrands/canon | jq -r "[.items[] | select(.uid==\"TailorBrands/canon\")] | length") == 1 && $(search tailorbrands/canon | jq -r ".items[0].subtitle") != "Not in your cached list"* ]]'
+
+# all listings fail → errors shown, no endless rerun
+reset_all; print nadavshatz > $MOCK_DIR/login
+$WF/refresh.sh
+out=$(search canon)
+check "all orgs failing: errors shown instead of endless 'Building…'" \
+  eval '[[ $(print -r -- $out | jq -r ".items[].title") == *"Couldn’t list TailorBrands"* && $(print -r -- $out | jq -r ".rerun // \"none\"") == none ]]'
+
+# a later partial failure keeps the failed org's cached repos
+reset_all; fixtures; $WF/refresh.sh
+rm $MOCK_DIR/repos_TailorBrands
+$WF/refresh.sh
+check "failed org keeps its previously cached repos" eval '[[ $(cut -f1 $R) == *TailorBrands/canon* && $(cut -f1 $R) == *nadavshatz/insomniac* ]]'
+check "and is reported" eval '[[ $(<$alfred_workflow_cache/errors) == TailorBrands ]]'
+
+# updater ignores ~/.curlrc
+rm -f $MOCK_DIR/curl.log; act "update_check now" >/dev/null
+check "update curl calls start with -q" eval '[[ $(head -1 $MOCK_DIR/curl.log) == -q ]]'
 
 print "\n$pass passed, $fail failed"
 (( fail == 0 ))
