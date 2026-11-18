@@ -93,7 +93,70 @@ reset_all; fixtures; touch $MOCK_DIR/noauth
 $WF/refresh.sh; rc=$?
 check "refresh without auth exits non-zero and writes nothing" eval '[[ $rc != 0 && ! -e $R ]]'
 
-# ==== TASK2 ====
+# --- search --------------------------------------------------------------------
+search() { $WF/search.sh "${1:-}" }
+stitles() { search "${1:-}" | jq -r '.items[].title' }
+seed() {  # fresh cache with the fixture repos
+  reset_all; fixtures; mkdir -p -m 700 $alfred_workflow_cache
+  cat $MOCK_DIR/repos_TailorBrands $MOCK_DIR/repos_nadavshatz > $R
+}
+seed
+out=$(search canon)
+check "search emits valid JSON" eval 'print -r -- $out | jq -e . >/dev/null'
+check "exact repo name ranks first, prefix next" \
+  eval '[[ $(print -r -- $out | jq -r "[.items[].uid] | .[0:2] | join(\" \")") == "TailorBrands/canon TailorBrands/canon-tools" ]]'
+check "repo item: ↩ homepage, ⌘ actions, ⌥ pulls, ⌃ copy" \
+  eval '[[ $(print -r -- $out | jq -r ".items[0] | [.arg,.mods.cmd.arg,.mods.alt.arg,.mods.ctrl.arg] | @tsv") == "https://github.com/TailorBrands/canon	https://github.com/TailorBrands/canon/actions	https://github.com/TailorBrands/canon/pulls	https://github.com/TailorBrands/canon" ]]'
+check "repo item shows description" eval '[[ $(print -r -- $out | jq -r ".items[0].subtitle") == "GitOps repo"* ]]'
+check "repo item autocompletes to 'slug '" eval '[[ $(print -r -- $out | jq -r ".items[0].autocomplete") == "TailorBrands/canon " ]]'
+check "subsequence match: 'ins' → insomniac" eval '[[ $(stitles ins | head -1) == "nadavshatz/insomniac" ]]'
+check "case-insensitive: 'PAPEL'" eval '[[ $(stitles PAPEL | head -1) == "TailorBrands/papel" ]]'
+check "owner match: 'nadav' → insomniac" eval '[[ $(stitles nadav | head -1) == "nadavshatz/insomniac" ]]'
+check "no match → 'No repo matches' item" eval '[[ $(stitles zzzqqq) == "No repo matches “zzzqqq”"* ]]'
+check "empty query lists repos" eval '(( $(search | jq ".items|length") >= 4 ))'
+check "typed slug not in cache is still offered" \
+  eval '[[ $(search other/thing | jq -r ".items[0] | [.title,.arg] | @tsv") == "other/thing	https://github.com/other/thing" ]]'
+rm -f $MOCK_DIR/gh.log
+for q in '-R x' 'a/b;rm' '--jq .' '../../etc' '$(id)' '`id`'; do search "$q" | jq -e . >/dev/null || bad "invalid JSON for '$q'"; done
+check "hostile queries never reach gh" eval '[[ -z $(ghlog) ]]'
+check "'> refresh' offers a refresh item" eval '[[ $(search "> refresh" | jq -r ".items[0] | [.title,.arg] | @tsv") == "Refresh repo list	refresh" ]]'
+print SsoOrg > $alfred_workflow_cache/errors
+check "orgs that failed are reported" eval '[[ $(stitles) == *"Couldn’t list SsoOrg (SSO not authorised for gh?)"* ]]'
+rm $alfred_workflow_cache/errors
+
+# first run: no cache
+reset_all; fixtures
+out=$(search canon)
+check "no cache → 'Building repo list…' and rerun" \
+  eval '[[ $(print -r -- $out | jq -r ".items[0].title") == "Building repo list…" && $(print -r -- $out | jq -r .rerun) == 0.5 ]]'
+search canon >/dev/null
+check "background refresh builds the cache" wait_for '[[ -s $R ]]'
+check "only one refresh started for rapid keystrokes" eval '[[ $(grep -cx TailorBrands $MOCK_DIR/gh.log) == 1 ]]'
+check "after refresh, results appear" eval '[[ $(stitles canon | head -1) == TailorBrands/canon ]]'
+
+# stale cache → served, refreshed in background
+seed; touch -t 202001010000 $R; rm -f $MOCK_DIR/gh.log
+check "stale cache still answers" eval '[[ $(stitles canon | head -1) == TailorBrands/canon ]]'
+check "stale cache triggers a refresh" wait_for '[[ $(ghlog) == *TailorBrands* ]]'
+
+# gh not ready
+reset_all; touch $MOCK_DIR/noauth
+check "not logged in → explains gh auth login" eval '[[ $(stitles canon | head -1) == "GitHub CLI not ready: run gh auth login" ]]'
+reset_all
+check "missing gh binary → same explanation" eval '[[ $(gh_path=/nonexistent/gh stitles canon | head -1) == "GitHub CLI not ready: run gh auth login" ]]'
+
+# --- open.sh -------------------------------------------------------------------
+reset_all
+act() { $WF/open.sh "$1" }
+act https://github.com/TailorBrands/canon/actions >/dev/null
+check "open.sh opens github URLs" eval '[[ $(<$MOCK_DIR/open.log) == "https://github.com/TailorBrands/canon/actions" ]]'
+rm -f $MOCK_DIR/open.log
+for u in file:///etc/passwd 'https://github.com.evil.com/x' 'http://github.com/a' '-a Calculator' 'https://github.com/a b'; do
+  act "$u" >/dev/null 2>&1 && bad "open.sh accepted '$u'"
+done
+check "open.sh refuses non-github / malformed URLs" eval '[[ ! -e $MOCK_DIR/open.log ]]'
+reset_all; fixtures
+check "open.sh refresh rebuilds and reports" eval '[[ $(act refresh) == "Repo list refreshed: 4 repos" && -s $R ]]'
 
 print "\n$pass passed, $fail failed"
 (( fail == 0 ))
