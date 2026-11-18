@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>bundleid</key>
+	<string>io.github.nadavshatz.github-jump</string>
+	<key>category</key>
+	<string>Productivity</string>
+	<key>connections</key>
+	<dict>
+		<key>9C3B6E00-0001-4000-8000-000000000001</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>9C3B6E00-0002-4000-8000-000000000002</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>9C3B6E00-0002-4000-8000-000000000002</string>
+				<key>modifiers</key>
+				<integer>1048576</integer>
+				<key>modifiersubtext</key>
+				<string>Open Actions</string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>9C3B6E00-0002-4000-8000-000000000002</string>
+				<key>modifiers</key>
+				<integer>524288</integer>
+				<key>modifiersubtext</key>
+				<string>Open pull requests</string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>9C3B6E00-0004-4000-8000-000000000004</string>
+				<key>modifiers</key>
+				<integer>262144</integer>
+				<key>modifiersubtext</key>
+				<string>Copy URL</string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>9C3B6E00-0002-4000-8000-000000000002</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>9C3B6E00-0003-4000-8000-000000000003</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+	</dict>
+	<key>createdby</key>
+	<string>Nadav Shatz</string>
+	<key>description</key>
+	<string>Open GitHub repos, Actions, pull requests and files via the gh CLI</string>
+	<key>disabled</key>
+	<false/>
+	<key>name</key>
+	<string>GitHub Jump</string>
+	<key>objects</key>
+	<array>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>alfredfiltersresultsmatchmode</key>
+				<integer>0</integer>
+				<key>argumenttreatemptyqueryasnil</key>
+				<true/>
+				<key>argumenttrimmode</key>
+				<integer>0</integer>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>keyword</key>
+				<string>{var:keyword}</string>
+				<key>queuedelaycustom</key>
+				<integer>3</integer>
+				<key>queuedelayimmediatelyinitially</key>
+				<true/>
+				<key>queuedelaymode</key>
+				<integer>0</integer>
+				<key>queuemode</key>
+				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string>Searching repos…</string>
+				<key>script</key>
+				<string></string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string>search.sh</string>
+				<key>subtext</key>
+				<string>Open a repo, its Actions, pull requests or a file</string>
+				<key>title</key>
+				<string>GitHub Jump</string>
+				<key>type</key>
+				<integer>8</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>9C3B6E00-0001-4000-8000-000000000001</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string></string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string>open.sh</string>
+				<key>type</key>
+				<integer>8</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>9C3B6E00-0002-4000-8000-000000000002</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>lastpathcomponent</key>
+				<false/>
+				<key>onlyshowifquerypopulated</key>
+				<true/>
+				<key>removeextension</key>
+				<false/>
+				<key>text</key>
+				<string>{query}</string>
+				<key>title</key>
+				<string>GitHub Jump</string>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.output.notification</string>
+			<key>uid</key>
+			<string>9C3B6E00-0003-4000-8000-000000000003</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>autopaste</key>
+				<false/>
+				<key>clipboardtext</key>
+				<string>{query}</string>
+				<key>ignoredynamicplaceholders</key>
+				<false/>
+				<key>transient</key>
+				<false/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.output.clipboard</string>
+			<key>uid</key>
+			<string>9C3B6E00-0004-4000-8000-000000000004</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+	</array>
+	<key>readme</key>
+	<string>GitHub Jump — open any of your GitHub repos, their Actions, pull requests or a file.
+
+  gh &lt;name&gt;                 fuzzy-match your repos and your orgs' repos
+      ↩ homepage · ⌘↩ Actions · ⌥↩ pull requests · ⌃↩ copy URL
+  gh owner/repo /path       find a file (local clone if you have one, else GitHub)
+  gh &gt; refresh              rebuild the repo list now
+
+Uses your existing GitHub CLI login (`gh auth login`). The workflow never sees,
+stores or logs a token: it only runs a fixed set of read-only `gh` commands,
+with every repo name validated first.
+
+Source &amp; docs: https://github.com/nadavshatz/alfred-github-jump</string>
+	<key>uidata</key>
+	<dict>
+		<key>9C3B6E00-0001-4000-8000-000000000001</key>
+		<dict>
+			<key>xpos</key>
+			<integer>40</integer>
+			<key>ypos</key>
+			<integer>120</integer>
+		</dict>
+		<key>9C3B6E00-0002-4000-8000-000000000002</key>
+		<dict>
+			<key>xpos</key>
+			<integer>300</integer>
+			<key>ypos</key>
+			<integer>60</integer>
+		</dict>
+		<key>9C3B6E00-0003-4000-8000-000000000003</key>
+		<dict>
+			<key>xpos</key>
+			<integer>520</integer>
+			<key>ypos</key>
+			<integer>60</integer>
+		</dict>
+		<key>9C3B6E00-0004-4000-8000-000000000004</key>
+		<dict>
+			<key>xpos</key>
+			<integer>300</integer>
+			<key>ypos</key>
+			<integer>220</integer>
+		</dict>
+	</dict>
+	<key>userconfigurationconfig</key>
+	<array>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string>gh</string>
+				<key>placeholder</key>
+				<string>gh</string>
+				<key>required</key>
+				<true/>
+				<key>trim</key>
+				<true/>
+			</dict>
+			<key>description</key>
+			<string></string>
+			<key>label</key>
+			<string>Keyword</string>
+			<key>type</key>
+			<string>textfield</string>
+			<key>variable</key>
+			<string>keyword</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string>TailorBrands</string>
+				<key>placeholder</key>
+				<string>TailorBrands</string>
+				<key>required</key>
+				<false/>
+				<key>trim</key>
+				<true/>
+			</dict>
+			<key>description</key>
+			<string>Comma-separated. Your own repos are always included.</string>
+			<key>label</key>
+			<string>Organizations</string>
+			<key>type</key>
+			<string>textfield</string>
+			<key>variable</key>
+			<string>orgs</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string>~/code</string>
+				<key>placeholder</key>
+				<string>~/code</string>
+				<key>required</key>
+				<true/>
+				<key>trim</key>
+				<true/>
+			</dict>
+			<key>description</key>
+			<string>Folder whose git clones are used for file search (no network needed for those).</string>
+			<key>label</key>
+			<string>Local clones</string>
+			<key>type</key>
+			<string>textfield</string>
+			<key>variable</key>
+			<string>code_dir</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string>/opt/homebrew/bin/gh</string>
+				<key>placeholder</key>
+				<string>/opt/homebrew/bin/gh</string>
+				<key>required</key>
+				<true/>
+				<key>trim</key>
+				<true/>
+			</dict>
+			<key>description</key>
+			<string>Absolute path to gh. Log in once with `gh auth login`.</string>
+			<key>label</key>
+			<string>GitHub CLI</string>
+			<key>type</key>
+			<string>textfield</string>
+			<key>variable</key>
+			<string>gh_path</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string>notify</string>
+				<key>pairs</key>
+				<array>
+					<array>
+						<string>Tell me in Alfred</string>
+						<string>notify</string>
+					</array>
+					<array>
+						<string>Download and open automatically</string>
+						<string>auto</string>
+					</array>
+					<array>
+						<string>Never check</string>
+						<string>off</string>
+					</array>
+				</array>
+			</dict>
+			<key>description</key>
+			<string>Checks GitHub Releases once a day. Installing always goes through Alfred's own update prompt.</string>
+			<key>label</key>
+			<string>Updates</string>
+			<key>type</key>
+			<string>popupbutton</string>
+			<key>variable</key>
+			<string>update_mode</string>
+		</dict>
+	</array>
+	<key>version</key>
+	<string>1.0.0</string>
+	<key>webaddress</key>
+	<string>https://github.com/nadavshatz/alfred-github-jump</string>
+</dict>
+</plist>

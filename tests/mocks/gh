@@ -1,0 +1,26 @@
+#!/bin/zsh -f
+# Mock gh. Logs argv (one arg per line, then "--") to $MOCK_DIR/gh.log.
+#   auth status                          → exit 1 if $MOCK_DIR/noauth
+#   api -X GET user --jq .login          → $MOCK_DIR/login (default "me")
+#   repo list ORG …                      → $MOCK_DIR/repos_ORG (TSV) or exit 1
+#   api -X GET repos/O/R --jq …          → $MOCK_DIR/branch_O__R or exit 1
+#   api -X GET repos/O/R/git/trees/B?recursive=1 --jq …
+#                                        → "truncated=<t>" then $MOCK_DIR/tree_O__R
+setopt extended_glob
+print -rl -- "$@" -- >> $MOCK_DIR/gh.log
+case "$1 $2" in
+  "auth status") [[ -e $MOCK_DIR/noauth ]] && exit 1; exit 0 ;;
+  "repo list")   [[ -f $MOCK_DIR/repos_$3 ]] || exit 1; cat $MOCK_DIR/repos_$3 ;;
+  "api -X")
+    p=$4
+    if [[ $p == user ]]; then cat $MOCK_DIR/login 2>/dev/null || print me
+    elif [[ $p == (#b)repos/([^/]##)/([^/]##)/git/trees/([^?]##)'?recursive=1' ]]; then
+      f=$MOCK_DIR/tree_$match[1]__$match[2]
+      [[ -f $f ]] || exit 1
+      [[ -e $f.truncated ]] && print truncated=true || print truncated=false
+      cat $f
+    elif [[ $p == (#b)repos/([^/]##)/([^/]##) ]]; then
+      cat $MOCK_DIR/branch_$match[1]__$match[2] 2>/dev/null || exit 1
+    else exit 1; fi ;;
+  *) exit 2 ;;
+esac
