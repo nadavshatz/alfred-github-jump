@@ -22,6 +22,7 @@ bad()  { print -P "%F{red}✘ $1%f"; [[ -n ${2:-} ]] && print -r -- "   $2"; (( 
 check() { local d=$1; shift; if "$@"; then ok $d; else bad $d; fi }
 wait_for() { integer i; for (( i = 0; i < 60; i++ )); do eval "$1" && return 0; sleep 0.1; done; return 1 }
 reset_all() { rm -rf $MOCK_DIR $alfred_workflow_cache; mkdir -p $MOCK_DIR }
+mode_of() { stat -c %a "$1" 2>/dev/null || stat -f %Lp "$1" }   # GNU first: GNU stat -f means filesystem
 ghlog() { cat $MOCK_DIR/gh.log 2>/dev/null }
 fixtures() {
   print -r -- $'TailorBrands/canon\tmaster\tGitOps repo' > $MOCK_DIR/repos_TailorBrands
@@ -81,8 +82,8 @@ reset_all; fixtures
 $WF/refresh.sh
 R=$alfred_workflow_cache/repos.tsv
 check "refresh writes repos for login + orgs" eval '[[ $(cut -f1 $R | LC_ALL=C sort | paste -sd" " -) == "TailorBrands/canon TailorBrands/canon-tools TailorBrands/papel nadavshatz/insomniac" ]]'
-check "repos.tsv is mode 600" eval '[[ $(stat -f %Lp $R 2>/dev/null || stat -c %a $R) == 600 ]]'
-check "cache dir is mode 700" eval '[[ $(stat -f %Lp $alfred_workflow_cache 2>/dev/null || stat -c %a $alfred_workflow_cache) == 700 ]]'
+check "repos.tsv is mode 600" eval '[[ $(mode_of $R) == 600 ]]'
+check "cache dir is mode 700" eval '[[ $(mode_of $alfred_workflow_cache) == 700 ]]'
 check "no errors file when all orgs succeed" eval '[[ ! -e $alfred_workflow_cache/errors ]]'
 reset_all; fixtures
 orgs='TailorBrands,SsoOrg,bad org' $WF/refresh.sh
@@ -183,7 +184,7 @@ out=$(search 'TailorBrands/papel /values')
 check "uncloned repo uses the tree API" eval '[[ $(print -r -- $out | jq -r ".items[0].arg") == "https://github.com/TailorBrands/papel/blob/master/src/values.go" ]]'
 search 'TailorBrands/papel /main' >/dev/null
 check "tree is cached (one API call for two queries)" eval '[[ $(grep -c "git/trees" $MOCK_DIR/gh.log) == 1 ]]'
-check "tree cache file is mode 600" eval '[[ $(stat -f %Lp $alfred_workflow_cache/trees/TailorBrands__papel.txt 2>/dev/null || stat -c %a $alfred_workflow_cache/trees/TailorBrands__papel.txt) == 600 ]]'
+check "tree cache file is mode 600" eval '[[ $(mode_of $alfred_workflow_cache/trees/TailorBrands__papel.txt) == 600 ]]'
 touch $MOCK_DIR/tree_TailorBrands__papel.truncated; rm -rf $alfred_workflow_cache/trees
 check "truncated tree adds an info item" eval '[[ $(stitles "TailorBrands/papel /") == *"Tree truncated by GitHub: clone it under "* ]]'
 
