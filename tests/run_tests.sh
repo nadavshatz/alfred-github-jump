@@ -197,5 +197,27 @@ check "invalid slug in file mode → no gh call" \
   eval '[[ $(stitles "a/../b /x") == "Not a valid owner/repo: a/../b" && -z $(ghlog) ]]'
 check "no matching file → info item" eval '[[ $(stitles "TailorBrands/canon /zzzz") == "No file matches “zzzz”"* ]]'
 
+# --- updates -------------------------------------------------------------------
+seed
+UPD=$alfred_workflow_cache/update
+mkpkg() {
+  zsh $ROOT/scripts/build.sh $1 >/dev/null
+  mkdir -p $MOCK_DIR/releases/v$1
+  mv -f $ROOT/dist/GitHub-Jump-$1.alfredworkflow $ROOT/dist/GitHub-Jump-$1.alfredworkflow.sha256 $MOCK_DIR/releases/v$1/
+}
+mkpkg 9.0.0
+print 9.0.0 > $MOCK_DIR/latest
+update_mode=notify search >/dev/null
+check "empty query starts a background update check" wait_for '[[ $(cat $UPD 2>/dev/null) == "9.0.0 "* ]]'
+check "update announced on empty query" eval '[[ $(update_mode=notify stitles) == *"Update available: GitHub Jump 9.0.0"* ]]'
+check "no update item while searching" eval '[[ $(update_mode=notify stitles canon) != *"Update available"* ]]'
+rm -f $MOCK_DIR/open.log
+check "open.sh installs a verified update" \
+  eval '[[ $(act "update_install 9.0.0") == "Opening GitHub Jump 9.0.0. Confirm the update in Alfred" && $(<$MOCK_DIR/open.log) == $alfred_workflow_cache/GitHub-Jump-9.0.0.alfredworkflow ]]'
+print "0000000000000000000000000000000000000000000000000000000000000000  x" > $MOCK_DIR/releases/v9.0.0/GitHub-Jump-9.0.0.alfredworkflow.sha256
+rm -f $MOCK_DIR/open.log
+check "tampered update rejected" eval '[[ $(act "update_install 9.0.0") == "Update not installed: checksum mismatch" && ! -e $MOCK_DIR/open.log ]]'
+check "manual check reports newer version" eval '[[ $(act "update_check now") == "GitHub Jump 9.0.0 is available (you have 1.0.0)" ]]'
+
 print "\n$pass passed, $fail failed"
 (( fail == 0 ))
